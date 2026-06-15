@@ -69,8 +69,9 @@ jobs:
     # 4. Generate the static Allure Report from test results
     - name: Generate Allure Report
       if: ${{ !cancelled() }}
+      # Allure 3 syntax: specify output with -o/--output, input is handled natively or passed differently
       run: |
-        npx allure generate allure-results --clean -o allure-report
+        npx allure generate -o allure-report allure-results
 
     # 5. Upload the generated Allure report as a Pages artifact
     - name: Upload Pages Artifact
