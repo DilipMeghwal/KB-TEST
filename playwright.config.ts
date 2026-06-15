@@ -44,7 +44,7 @@ reporter: [
   projects: [
     {
       name: 'parabank-ui-tests',
-      use: { ...devices['Desktop Chrome'] , baseURL: 'http://localhost:8080/parabank/index.htm' },
+      use: { ...devices['Desktop Chrome'] , baseURL: process.env.WEB_URL },
     },
   ],
 });

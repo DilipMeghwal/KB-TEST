@@ -3,29 +3,27 @@ const { expect, request } = require('@playwright/test');
 
 test.describe('Parabank Login Tests', () => {
   test('should have the correct page title', async ({ page }) => {
-    await page.goto('');
+    await page.goto('index.htm');
     await expect(page).toHaveTitle('ParaBank | Welcome | Online Banking');
   });
 
   test('should display the login form', async ({ page }) => {
-    await page.goto('');
+    await page.goto('index.htm');
     const loginForm = page.locator('#loginPanel');
     await expect(loginForm).toBeVisible();
   });
 
   test('should login with valid credentials', async ({ login }) => {
-    await login.page.goto('');
+    await login.page.goto('index.htm');
     await login.login(process.env.USERNAME, process.env.PASSWORD);
     await expect(login.page).toHaveURL(/.*overview\.htm/);
   });
 
   test('Login via API/Form and continue into UI', async ({ browser }) => {
-    const baseUrl = 'http://localhost:8080';
-
     // 1. Create a request context to perform a form-based login
-    const requestContext = await request.newContext({ baseURL: baseUrl });
+    const requestContext = await request.newContext();
 
-    const response = await requestContext.post('/parabank/login.htm', {
+    const response = await requestContext.post('login.htm', {
       form: {
         username: 'john',
         password: 'demo'
@@ -44,7 +42,7 @@ test.describe('Parabank Login Tests', () => {
     const page = await uiContext.newPage();
 
     // 4. Navigate straight to the authenticated dashboard
-    await page.goto(`${baseUrl}/parabank/overview.htm`);
+    await page.goto(`overview.htm`);
 
     // Assert you are successfully logged in on the UI side
     await expect(page.locator('#leftPanel')).toContainText('Welcome John Smith');

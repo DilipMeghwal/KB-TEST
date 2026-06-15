@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "parabank-ui-tests": "ENV=local npx playwright test --project=parabank-ui-tests"
+    "parabank-ui-tests": "ENV=ci npx playwright test --project=parabank-ui-tests --ui"
   },
   "keywords": [],
   "author": "",
