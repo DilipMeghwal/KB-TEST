@@ -16,18 +16,17 @@ on:
           - local
           - ci
 
-# 1. Grant permissions required for deploying to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 2. Prevent concurrent deployments from stepping on each other
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
+  # JOB 1: Run Tests and Prepare Report Artifact
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -35,29 +34,37 @@ jobs:
     env:
       TARGET_ENV: ${{ github.event.inputs.environment || 'ci' }}
 
-    # 3. Define an environment to output the live report URL in the GUI
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
     - uses: actions/checkout@v4
     
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+        cache: 'npm' # Speeds up npm ci on consecutive runs
         
     - name: Install dependencies
       run: npm ci
       
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
+    - name: Cache Playwright Browsers
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        
+    - name: Install Playwright OS system dependencies
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: npx playwright install chromium --with-deps
+
+    - name: Ensure OS dependencies are present (on cache hit)
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      run: npx playwright install-deps chromium
       
     - name: Run Playwright tests
       run: npx playwright test
       env:
         ENV: ${{ env.TARGET_ENV }}
-      continue-on-error: true # Ensure the workflow keeps running to generate reports even if tests fail
+      continue-on-error: true # Keep going to generate reports even if tests fail
         
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
@@ -66,22 +73,28 @@ jobs:
         path: playwright-report/
         retention-days: 30
 
-    # 4. Generate the static Allure Report from test results
     - name: Generate Allure Report
       if: ${{ !cancelled() }}
-      # Allure 3 syntax: specify output with -o/--output, input is handled natively or passed differently
       run: |
         npx allure generate -o allure-report allure-results
 
-    # 5. Upload the generated Allure report as a Pages artifact
     - name: Upload Pages Artifact
       if: ${{ !cancelled() }}
       uses: actions/upload-pages-artifact@v3
       with:
         path: allure-report/
 
-    # 6. Deploy the artifact to GitHub Pages
+  # JOB 2: Safely Deploy Report to GitHub Pages
+  deploy:
+    needs: test
+    if: ${{ !cancelled() }} # Ensures the report deploys even if tests failed in the first job
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      if: ${{ !cancelled() }}
       uses: actions/deploy-pages@v4
